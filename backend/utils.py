@@ -27,8 +27,30 @@ def unpack_safelink_url(url: str) -> str:
     return url
 
 
+def extract_embedded_url(url_string: str) -> str:
+    """
+    Extract and decode the actual URL from a string that contains it after &url= parameter.
+    
+    Example:
+    Input: https://example.com/redirect/?param=value&url=https%3a%2f%2factual-site.com
+    Output: https://actual-site.com
+    
+    Returns the extracted URL if found, otherwise returns the original string.
+    """
+    if "&url=" in url_string:
+        parts = url_string.split("&url=", 1)
+        if len(parts) > 1 and parts[1]:
+            # URL decode the extracted part
+            return urllib.parse.unquote_plus(parts[1])
+    return url_string
+
+
 def unpack_safelink_urls(urls: typing.Iterable[str]) -> set[str]:
     return {unpack_safelink_url(url) for url in urls}
+
+
+def extract_embedded_urls(urls: typing.Iterable[str]) -> set[str]:
+    return {extract_embedded_url(url) for url in urls}
 
 
 def normalize_url(url: str):
@@ -64,7 +86,10 @@ def parse_urls_from_body(content: str, content_type: str) -> set[str]:
         content = h.handle(content)
 
     urls.update(parse_urls(content, parse_urls_without_scheme=False))
-    return normalize_urls(unpack_safelink_urls(urls))
+    # Process URLs: normalize, unpack safelinks, and extract embedded URLs
+    normalized_urls = normalize_urls(urls)
+    unpacked_urls = unpack_safelink_urls(normalized_urls)
+    return extract_embedded_urls(unpacked_urls)
 
 
 def is_truthy(v: Any) -> bool:
