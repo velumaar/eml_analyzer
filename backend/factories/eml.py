@@ -5,16 +5,11 @@ from typing import Any
 import dateparser
 from eml_parser import EmlParser
 from ioc_finder import parse_domain_names, parse_email_addresses, parse_ipv4_addresses
-from returns.functions import raise_exception
-from returns.maybe import Maybe
-from returns.pipeline import flow
-from returns.pointfree import bind
-from returns.result import ResultE, safe
 
 from backend import schemas
-from backend.outlookmsgfile import Message
+from backend.outlookmsgfile_wrapper import Message
 from backend.utils import parse_urls_from_body
-from backend.validator import is_eml_file
+from backend.validator import is_msg_file
 
 from .abstract import AbstractFactory
 
@@ -39,19 +34,17 @@ def is_inline_forward_attachment(attachment: dict) -> bool:
     return is_rfc822 and is_inline
 
 
-@safe
 def to_eml(data: bytes) -> bytes:
-    if is_eml_file(data):
-        return data
+    if is_msg_file(data):
+        # assume data is a msg file
+        file = BytesIO(data)
+        message = Message(file)
+        email = message.to_email()
+        return email.as_bytes()
 
-    # assume data is a msg file
-    file = BytesIO(data)
-    message = Message(file)
-    email = message.to_email()
-    return email.as_bytes()
+    return data
 
 
-@safe
 def parse(data: bytes) -> dict:
     parser = EmlParser(include_raw_body=True, include_attachment_data=True)
     return parser.decode_email_bytes(data)
@@ -74,11 +67,11 @@ def _normalize_received_date(received: dict):
     parts: list[str] = src.split(";")
     last_part = parts[-1].strip()
 
-    received["date"] = (
-        Maybe.from_optional(received.get("date"))
-        .bind_optional(parse_datetime)
-        .value_or(parse_datetime(last_part))
-    )
+    date = received.get("date")
+    if date:
+        received["date"] = parse_datetime(date)
+    else:
+        received["date"] = parse_datetime(last_part)
 
     return received
 
@@ -92,18 +85,17 @@ def _normalize_received(received: list[dict]) -> list[dict]:
 
     first = received[0]
 
-    optional_base_datetime = (
-        Maybe.from_optional(first.get("date"))
-        .bind_optional(parse_datetime)
-        .value_or(None)
-    )
+    optional_base_datetime: datetime.datetime | str | None = None
+    first_date = first.get("date")
+    if first_date:
+        optional_base_datetime = parse_datetime(first_date)
 
     for r in received:
-        optional_datetime = (
-            Maybe.from_optional(r.get("date"))
-            .bind_optional(parse_datetime)
-            .value_or(None)
-        )
+        optional_datetime: datetime.datetime | str | None = None
+        date = r.get("date")
+        if date:
+            optional_datetime = parse_datetime(date)
+
         if optional_base_datetime is None or optional_datetime is None:
             continue
 
@@ -119,7 +111,6 @@ def _normalize_received(received: list[dict]) -> list[dict]:
     return received
 
 
-@safe
 def normalize_header(parsed: dict) -> dict:
     header = parsed.get("header", {})
     # set message-id as a top-level attribute
@@ -147,7 +138,6 @@ def _normalize_body(body: dict[str, Any]) -> dict[str, Any]:
     return body
 
 
-@safe
 def normalize_bodies(parsed: dict) -> dict:
     bodies = parsed.get("body", [])
     parsed["bodies"] = [_normalize_body(body) for body in bodies]
@@ -155,13 +145,16 @@ def normalize_bodies(parsed: dict) -> dict:
     return parsed
 
 
-@safe
 def normalize_attachments(parsed: dict) -> dict:
     # change "attachment" to "attachments"
     attachments = parsed.get("attachment", [])
 
     non_inline_forward_attachments = []
     for attachment in attachments:
+        content_header = attachment.get("content_header", {})
+        if content_id := content_header.get("content-id"):
+            attachment["content_id"] = content_id[0]
+
         if not is_inline_forward_attachment(attachment):
             non_inline_forward_attachments.append(attachment)
 
@@ -170,19 +163,15 @@ def normalize_attachments(parsed: dict) -> dict:
     return parsed
 
 
-@safe
 def transform(parsed: dict) -> schemas.Eml:
     return schemas.Eml.model_validate(parsed)
 
 
 class EmlFactory(AbstractFactory):
     def call(self, data: bytes) -> schemas.Eml:
-        result: ResultE[schemas.Eml] = flow(
-            to_eml(data),
-            bind(parse),
-            bind(normalize_attachments),
-            bind(normalize_bodies),
-            bind(normalize_header),
-            bind(transform),
-        )
-        return result.alt(raise_exception).unwrap()
+        eml = to_eml(data)
+        parsed = parse(eml)
+        parsed = normalize_header(parsed)
+        parsed = normalize_attachments(parsed)
+        parsed = normalize_bodies(parsed)
+        return transform(parsed)

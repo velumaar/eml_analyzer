@@ -1,7 +1,6 @@
 # EML analyzer
 
 [![Coverage Status](https://coveralls.io/repos/github/ninoseki/eml_analyzer/badge.svg?branch=master)](https://coveralls.io/github/ninoseki/eml_analyzer?branch=master)
-[![CodeFactor](https://www.codefactor.io/repository/github/ninoseki/eml_analyzer/badge)](https://www.codefactor.io/repository/github/ninoseki/eml_analyzer)
 
 EML analyzer is an application to analyze the EML file which can:
 
@@ -53,19 +52,19 @@ Configuration can be done via environment variables.
 
 Alternatively you can set values through `.env` file. Values in `.env` file will be automatically loaded.
 
-| Key                    | Desc.                                           | Default     |
-| ---------------------- | ----------------------------------------------- | ----------- |
-| `INQUEST_API_KEY`      | InQuest API key                                 | -           |
-| `REDIS_EXPIRE`         | Redis cache expiration time (in seconds)        | 3600        |
-| `REDIS_KEY_PREFIX`     | Redis key prefix                                | `analysis`  |
-| `REDIS_URL`            | Redis URL                                       | -           |
-| `SPAMASSASSIN_HOST`    | SpamAssassin host                               | `127.0.0.1` |
-| `SPAMASSASSIN_PORT`    | SpamAssassin port                               | 783         |
-| `SPAMASSASSIN_TIMEOUT` | SpamAssassin timeout (in seconds)               | 10          |
-| `URLSCAN_API_KEY`      | urlscan.io API Key                              | -           |
-| `VIRUSTOTAL_API_KEY`   | VirusTotal API Key                              | -           |
-| `ASYNC_MAX_AT_ONCE`    | Max number of concurrently running lookup tasks | `None`      |
-| `ASYNC_MAX_PER_SECOND` | Max number of tasks spawned per second          | `None`      |
+| Key                          | Desc.                                           | Default     |
+| ---------------------------- | ----------------------------------------------- | ----------- |
+| `REDIS_EXPIRE`               | Redis cache expiration time (in seconds)        | 3600        |
+| `REDIS_KEY_PREFIX`           | Redis key prefix                                | `analysis`  |
+| `REDIS_URL`                  | Redis URL                                       | -           |
+| `REDIS_CACHE_LIST_AVAILABLE` | Expose a list of cached keys                    | True        |
+| `SPAMASSASSIN_HOST`          | SpamAssassin host                               | `127.0.0.1` |
+| `SPAMASSASSIN_PORT`          | SpamAssassin port                               | 783         |
+| `SPAMASSASSIN_TIMEOUT`       | SpamAssassin timeout (in seconds)               | 10          |
+| `URLSCAN_API_KEY`            | urlscan.io API Key                              | -           |
+| `VIRUSTOTAL_API_KEY`         | VirusTotal API Key                              | -           |
+| `ASYNC_MAX_AT_ONCE`          | Max number of concurrently running lookup tasks | `None`      |
+| `ASYNC_MAX_PER_SECOND`       | Max number of tasks spawned per second          | `None`      |
 
 ## ToDo
 

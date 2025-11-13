@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, type PropType } from 'vue'
+import { type PropType } from 'vue'
 
 import Eml from '@/components/EmlItem.vue'
 import Verdicts from '@/components/verdicts/VerdictsItem.vue'
+import { useStatus } from '@/composables/useStatus'
 import type { ResponseType } from '@/schemas'
-import { useStatusStore } from '@/store'
 
 defineProps({
   response: {
@@ -13,22 +13,21 @@ defineProps({
   }
 })
 
-const store = useStatusStore()
-const status = computed(() => store.$state)
+const { status } = useStatus()
 </script>
 
 <template>
-  <div class="box">
-    <div class="block">
-      <h2 class="is-size-4 has-text-weight-bold middle">ID</h2>
-      <article class="message is-info">
-        <div class="message-body">
-          <router-link :to="{ name: 'Lookup', params: { id: response.id } }" v-if="status.cache">{{
+  <div class="grid gap-4">
+    <div class="grid gap-4" v-if="status.cache">
+      <h2 class="text-2xl font-bold middle">Cache</h2>
+      <div class="card border-1 border-info">
+        <div class="card-body">
+          <h3 class="card-title text-base">ID</h3>
+          <router-link :to="{ name: 'Lookup', params: { id: response.id } }">{{
             response.id
           }}</router-link>
-          <p v-else>{{ response.id }}</p>
         </div>
-      </article>
+      </div>
     </div>
     <Verdicts :verdicts="response.verdicts" v-if="response.verdicts.length > 0" />
     <Eml :eml="response.eml" />
